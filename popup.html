@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      body {
+        font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+        padding: 20px;
+        width: 320px;
+        background-color: #f4f6f8;
+        color: #333;
+        margin: 0;
+      }
+      .container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      h3 {
+        margin: 0 0 15px 0;
+        text-align: center;
+        color: #444;
+        font-size: 18px;
+      }
+      label {
+        display: block;
+        margin-top: 12px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #555;
+      }
+      input {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        box-sizing: border-box;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: #007bff;
+        outline: none;
+      }
+      .btn-group {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .btn-full {
+        grid-column: span 2;
+      }
+      .options-group {
+        margin-top: 10px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        margin-top: 0;
+        font-weight: normal;
+        cursor: pointer;
+      }
+      .checkbox-label input {
+        width: auto;
+        margin: 0 5px 0 0;
+      }
+      button {
+        padding: 10px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        color: white;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+
+      #save { background-color: #28a745; }
+      #save:hover { background-color: #218838; }
+
+      #pause { background-color: #dc3545; }
+      #pause:hover { background-color: #c82333; }
+
+      #top { background-color: #007bff; }
+      #top:hover { background-color: #0056b3; }
+
+      #bottom { background-color: #6610f2; }
+      #bottom:hover { background-color: #520dc2; }
+
+      #clear { background-color: #6c757d; }
+      #clear:hover { background-color: #5a6268; }
+
+      #saveSettings { background-color: #17a2b8; }
+      #saveSettings:hover { background-color: #138496; }
+
+      #status {
+        margin-top: 15px;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 6px;
+        font-size: 14px;
+        display: none;
+      }
+      .status-running { background-color: #d4edda; color: #155724; display: block !important; }
+      .status-paused { background-color: #f8d7da; color: #721c24; display: block !important; }
+      .status-cleared { background-color: #e2e3e5; color: #383d41; display: block !important; }
+
+      .hint {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h3>自動搶票助手</h3>
+
+      <label>關鍵字(價格)</label>
+      <input type="text" id="keywords" placeholder="請輸入關鍵字，例如:3800">
+
+      <label>毫秒 (刷新間隔)</label>
+      <input type="text" id="milesecond" placeholder="例如: 100">
+
+      <label>會員代碼&問題答案</label>
+      <input type="text" id="memberCode" placeholder="請輸入代碼">
+
+      <label>信用卡卡號</label>
+      <input
+        type="text"
+        id="creditCardNumber"
+        class="member-code"
+        placeholder="請輸入信用卡卡號"
+        inputmode="numeric"
+        autocomplete="off"
+      >
+
+      <label>數量</label>
+      <input type="number" id="quantity" min="1" max="4" value="1">
+
+      <div class="options-group">
+        <label class="checkbox-label"><input type="checkbox" id="random"> 隨機選位</label>
+        <label class="checkbox-label"><input type="checkbox" id="excludeDisability" checked> 排除身障位</label>
+      </div>
+
+      <div class="btn-group">
+        <button id="save" class="btn-full">執行</button>
+        <button id="pause">暫停</button>
+        <button id="top">上到下 & 執行</button>
+        <button id="bottom">下到上 & 執行</button>
+        <button id="saveSettings">儲存當前設定</button>
+        <button id="clear">清除設定</button>
+      </div>
+
+      <div id="status"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
