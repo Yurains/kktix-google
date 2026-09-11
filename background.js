@@ -1,2 +1,2 @@
-
-// 空背景，用於滿足 manifest 要求（可擴充功能放這）
+// Manifest V3 service worker. Runtime state is stored in chrome.storage.local,
+// so it survives popup closure, page navigation, and service-worker suspension.

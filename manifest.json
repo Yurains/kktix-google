@@ -1,20 +1,17 @@
 {
   "manifest_version": 3,
   "name": "KKTIX Auto Ticket Buyer",
-  "version": "2.1",
-  "description": "自動刷新與搶票工具 (含信用卡驗證)",
-  "permissions": ["scripting", "tabs"],
+  "version": "2.2",
+  "description": "Keeps the KKTIX ticket-page automation running across reloads.",
+  "permissions": ["scripting", "storage", "tabs"],
   "host_permissions": ["https://kktix.com/*"],
-  "action": {
-    "default_popup": "popup.html"
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
+  "action": { "default_popup": "popup.html" },
+  "background": { "service_worker": "background.js" },
   "content_scripts": [
     {
-      "matches": ["https://kktix.com/events/*/registrations/new"],
-      "js": ["content.js"]
+      "matches": ["https://kktix.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ]
 }
