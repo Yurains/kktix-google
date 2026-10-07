@@ -4,7 +4,11 @@
 
   let reloadTimer = null;
   let ticketObserver = null;
+  let checkoutObserver = null;
+  let advanceObserver = null;
+  let advanceTimer = null;
   let actionTaken = false;
+  let orderConfirmationClicked = false;
   const DEFAULTS = {
     keywords: '', quantity: 1, milesecond: 3000, memberCode: '',
     creditCardNumber: '', random: false, excludeDisability: true
@@ -31,7 +35,9 @@
   }
 
   function visible(element) {
-    return element && element.getClientRects().length > 0 && !element.disabled;
+    return element && element.getClientRects().length > 0 &&
+      !element.disabled && !element.hasAttribute('disabled') &&
+      element.getAttribute('aria-disabled') !== 'true';
   }
 
   function scheduleReload(milliseconds) {
@@ -76,7 +82,7 @@
     }
 
     if (settings.creditCardNumber) {
-      setTimeout(() => {
+      const fillCreditCardNumber = () => {
         const candidates = [...document.querySelectorAll('input.member-code, input[type="text"]')];
         const target = candidates.find((input) => {
           if (!visible(input) || input.closest('.ticket-unit') || input.closest('.custom-captcha')) return false;
@@ -87,22 +93,71 @@
           return context.includes('\u4fe1\u7528\u5361') || context.includes('card') || input.classList.contains('member-code');
         });
         if (target) setInputValue(target, settings.creditCardNumber);
-      }, 250);
+        return Boolean(target);
+      };
+      if (!fillCreditCardNumber()) setTimeout(fillCreditCardNumber, 100);
     }
   }
 
   function agreeToTerms() {
     const checkbox = document.querySelector('#person_agree_terms');
-    if (checkbox && !checkbox.checked) checkbox.click();
+    if (checkbox && !checkbox.checked && !checkbox.disabled) checkbox.click();
   }
 
-  function clickNextWhenReady(attempt = 0) {
+  function handleCheckout() {
+    agreeToTerms();
+    if (orderConfirmationClicked) return;
+
+    const checkbox = document.querySelector('#person_agree_terms');
+    if (!checkbox?.checked) return;
+
+    const confirmButton = document.querySelector('a[ng-click="confirmOrder()"]');
+    if (!visible(confirmButton)) return;
+
+    orderConfirmationClicked = true;
+    console.info('[KKTIX auto buyer] Confirming order form.');
+    confirmButton.click();
+  }
+
+  function watchCheckout() {
+    if (checkoutObserver || !document.documentElement) return;
+    checkoutObserver = new MutationObserver(handleCheckout);
+    checkoutObserver.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['disabled', 'aria-disabled', 'class']
+    });
+    handleCheckout();
+  }
+
+  function stopWaitingToAdvance() {
+    advanceObserver?.disconnect();
+    advanceObserver = null;
+    clearTimeout(advanceTimer);
+    advanceTimer = null;
+  }
+
+  function clickNextWhenReady() {
+    agreeToTerms();
+
+    // When KKTIX offers both seat choices, use computer assignment rather
+    // than accidentally taking the manual-seat route.
+    const computerButton = [...document.querySelectorAll('button')].find((button) =>
+      button.getAttribute('ng-click')?.trim() === 'challenge(1)' ||
+      normalizeText(button.innerText).includes('\u96fb\u8166\u914d\u4f4d'));
+    if (computerButton) {
+      if (!visible(computerButton)) return;
+      stopWaitingToAdvance();
+      console.info('[KKTIX auto buyer] Selecting computer-assigned seats.');
+      computerButton.click();
+      return;
+    }
+
     const buttons = [...document.querySelectorAll(
       '.register-new-next-button-area button, button.btn-primary, input[type="submit"]'
     )];
     const next = buttons.find((button) => {
       const text = normalizeText(button.innerText || button.value);
-      return !button.disabled && (
+      return visible(button) && (
         text.includes('\u4e0b\u4e00\u6b65') ||
         text.includes('\u9032\u5165\u4e0b\u4e00\u6b65') ||
         text.includes('next')
@@ -110,11 +165,21 @@
     });
 
     if (next) {
+      stopWaitingToAdvance();
       console.info('[KKTIX auto buyer] Ticket selected; proceeding.');
       next.click();
-      return;
     }
-    if (attempt < 100) setTimeout(() => clickNextWhenReady(attempt + 1), 200);
+  }
+
+  function waitToAdvance() {
+    stopWaitingToAdvance();
+    advanceObserver = new MutationObserver(clickNextWhenReady);
+    advanceObserver.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['disabled', 'class', 'style']
+    });
+    advanceTimer = setTimeout(stopWaitingToAdvance, 20000);
+    clickNextWhenReady();
   }
 
   function rowMatches(row, keywordList) {
@@ -137,6 +202,7 @@
       console.info('[KKTIX auto buyer] Paused.');
       return;
     }
+    watchCheckout();
     if (actionTaken) return;
 
     const settings = { ...DEFAULTS, ...(state.settings || {}) };
@@ -188,7 +254,7 @@
     setInputValue(input, Math.max(1, Number(settings.quantity) || 1));
     agreeToTerms();
     fillOptionalFields(settings);
-    setTimeout(() => clickNextWhenReady(), 300);
+    waitToAdvance();
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -197,11 +263,16 @@
       clearTimeout(reloadTimer);
       ticketObserver?.disconnect();
       ticketObserver = null;
+      checkoutObserver?.disconnect();
+      checkoutObserver = null;
+      stopWaitingToAdvance();
       actionTaken = false;
+      orderConfirmationClicked = false;
       return;
     }
     if (changes.running || changes.settings || changes.direction) {
       clearTimeout(reloadTimer);
+      stopWaitingToAdvance();
       actionTaken = false;
       run().catch((error) => console.error('[KKTIX auto buyer] Failed:', error));
     }
